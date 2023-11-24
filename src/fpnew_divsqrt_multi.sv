@@ -262,8 +262,8 @@ module fpnew_divsqrt_multi #(
   div_sqrt_top_mvp i_divsqrt_lei (
    .Clk_CI           ( clk_i               ),
    .Rst_RBI          ( rst_ni              ),
-   .Div_start_SI     ( div_valid           ),
-   .Sqrt_start_SI    ( sqrt_valid          ),
+   .Div_start_SI     ( div_valid_d         ),
+   .Sqrt_start_SI    ( '0                  ),
    .Operand_a_DI     ( divsqrt_operands[0] ),
    .Operand_b_DI     ( divsqrt_operands[1] ),
    .RM_SI            ( rnd_mode_q          ),
@@ -282,11 +282,13 @@ module fpnew_divsqrt_multi #(
    logic                           unit_ready_d;
    logic                           unit_done_d;
 
+   logic                           div_valid_d;
+
    logic [C_OP_FP64-1:0] unit_result_p[OUTPUT_DELAY_STAGES];
    logic [4:0]           unit_status_p[OUTPUT_DELAY_STAGES];
    logic                 unit_ready_p[OUTPUT_DELAY_STAGES];
    logic                 unit_done_p[OUTPUT_DELAY_STAGES];
-
+   logic                 div_valid_p[OUTPUT_DELAY_STAGES];
 
    integer i;
    always_ff @( posedge clk_i ) begin
@@ -296,6 +298,7 @@ module fpnew_divsqrt_multi #(
         unit_status_p[i] <= '0;
         unit_ready_p[i] <= '0;
         unit_done_p [i] <= '0;
+        div_valid_p[i] <= '0;
       end
     end else begin
       for (i = 1; i < OUTPUT_DELAY_STAGES; i++) begin
@@ -303,11 +306,13 @@ module fpnew_divsqrt_multi #(
         unit_status_p[i] <= unit_status_p[i-1];
         unit_ready_p[i] <= unit_ready_p[i-1];
         unit_done_p [i] <= unit_done_p [i-1];
+        div_valid_p [i] <= div_valid_p [i-1];
       end
       unit_result_p[0] <= unit_result_d;
       unit_status_p[0] <= unit_status_d;
       unit_ready_p[0] <= unit_ready_d;
       unit_done_p[0] <= unit_done_d;
+      div_valid_p[0] <= div_valid;
     end
    end
 
@@ -315,6 +320,8 @@ module fpnew_divsqrt_multi #(
    assign unit_status = unit_status_p[OUTPUT_DELAY_STAGES-1];
    assign unit_ready = unit_ready_p[OUTPUT_DELAY_STAGES-1];
    assign unit_done = unit_done_p[OUTPUT_DELAY_STAGES-1];
+
+   assign div_valid_d = div_valid_p[OUTPUT_DELAY_STAGES-1];
 
   // Adjust result width and fix FP8
   assign adjusted_result = result_is_fp8_q ? unit_result >> 8 : unit_result;
